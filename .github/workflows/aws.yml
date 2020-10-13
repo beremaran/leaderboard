@@ -67,7 +67,7 @@ jobs:
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
-        task-definition: task-definition.json
+        task-definition: leaderboard-task-definition.json
         container-name: leaderboard-app
         image: ${{ steps.build-image.outputs.image }}
 
@@ -76,5 +76,5 @@ jobs:
       with:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: leaderboard-app-service
-        cluster: default
+        cluster: leaderboard
         wait-for-service-stability: true
