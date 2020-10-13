@@ -8,7 +8,7 @@ from faker import Faker
 from pprint import pprint
 from multiprocessing import Pool
 
-BASE_URL = 'http://host.docker.internal:1323'
+BASE_URL = 'http://leaderboard-v2-lb-ecs-tg-584908050.eu-central-1.elb.amazonaws.com'
 
 if 'BASE_URL' in os.environ.keys():
     BASE_URL = os.environ['BASE_URL']
@@ -16,7 +16,7 @@ if 'BASE_URL' in os.environ.keys():
 DURATIONS = {}
 DURATIONS_LOCK = threading.Lock()
 FAKER = Faker()
-UNTIL_USERS_REACHED = 1000000
+UNTIL_USERS_REACHED = 1000
 
 
 def update_statistics(key, r):
@@ -50,7 +50,11 @@ def create_user():
     }
 
     r = requests.post('%s/user/create' % BASE_URL, json=user)
-    assert r.status_code == 201
+    try:
+        assert r.status_code == 201
+    except AssertionError:
+        print(r.text)
+        exit(1)
     update_statistics('create_user', r)
 
     r = r.json()
@@ -63,7 +67,11 @@ def play_game(user_id):
         'user_id': user_id,
         'timestamp': int(time.time())
     })
-    assert r.status_code == 201
+    try:
+        assert r.status_code == 201
+    except AssertionError:
+        print(r.text)
+        exit(1)
     update_statistics('play_game', r)
 
 
@@ -76,16 +84,16 @@ def generate_data(id):
         user_id = create_user()
         USER_IDS.append(user_id)
 
-        completion = (current_user_index * 100 / to_process)
-        if completion != 0 and completion % 1000 == 0:
+        completion = (current_user_index * 100 // to_process)
+        if completion != 0 and completion % 10 == 0:
             get_leaderboard()
             print('#%d: %.2f : %s' %
                   (id, completion, json.dumps(DURATIONS)))
 
     for current_game_index in range(to_process * 100):
         play_game(random.choice(USER_IDS))
-        completion = (current_game_index * 100 / to_process)
-        if completion != 0 and completion % 1000 == 0:
+        completion = (current_game_index * 100 // to_process)
+        if completion != 0 and completion % 10 == 0:
             get_leaderboard()
             print('#%d: %.2f : %s' %
                   (id, completion, json.dumps(DURATIONS)))

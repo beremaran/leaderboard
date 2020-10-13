@@ -40,6 +40,9 @@ func Run() {
 	scoreHandler := handlers.NewScoreHandler(userService, redisService, properties.LeaderboardKeyPrefix)
 	scoreHandler.Register(e)
 
+	actuator := handlers.NewActuatorHandler(redisService)
+	actuator.Register(e)
+
 	e.Logger.Fatal(e.Start(":1323"))
 }
 
