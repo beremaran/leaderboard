@@ -25,10 +25,6 @@
         {
           "name": "LEADERBOARD_KEY_PREFIX",
           "value": "USER_RANKING_"
-        },
-        {
-          "name": "REDIS_PASSWORD",
-          "value": ""
         }
       ],
       "resourceRequirements": null,
@@ -47,7 +43,7 @@
       "memoryReservation": 256,
       "volumesFrom": [],
       "stopTimeout": null,
-      "image": "919720632485.dkr.ecr.eu-central-1.amazonaws.com/leaderboard-service",
+      "image": "919720632485.dkr.ecr.eu-central-1.amazonaws.com/leaderboard-service:11e1844be2236c9ae0865a310edb95d8f4b32517",
       "startTimeout": null,
       "firelensConfiguration": null,
       "dependsOn": null,
@@ -69,11 +65,11 @@
   ],
   "placementConstraints": [],
   "memory": "512",
-  "taskRoleArn": "arn:aws:iam::919720632485:role/ssm-full-access",
+  "taskRoleArn": "arn:aws:iam::919720632485:role/taskExecutionArn",
   "compatibilities": [
     "EC2"
   ],
-  "taskDefinitionArn": "arn:aws:ecs:eu-central-1:919720632485:task-definition/leaderboard-task-definition:3",
+  "taskDefinitionArn": "arn:aws:ecs:eu-central-1:919720632485:task-definition/leaderboard-task-definition:8",
   "family": "leaderboard-task-definition",
   "requiresAttributes": [
     {
@@ -113,7 +109,7 @@
   ],
   "networkMode": "bridge",
   "cpu": "512",
-  "revision": 3,
+  "revision": 8,
   "status": "ACTIVE",
   "inferenceAccelerators": null,
   "proxyConfiguration": null,
