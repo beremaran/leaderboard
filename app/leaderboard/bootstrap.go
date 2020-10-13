@@ -44,8 +44,18 @@ func Run() {
 }
 
 func buildRedisService(properties *Properties) api.RedisService {
+	if properties.RedisCluster {
+		client := redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:    []string{properties.RedisHost},
+			PoolSize: 64,
+			Password: properties.RedisPassword,
+		})
+
+		return services.NewClusterRedisService(client)
+	}
+
 	client := redis.NewClient(&redis.Options{
-		Addr:    properties.RedisHost,
+		Addr:     properties.RedisHost,
 		PoolSize: 64,
 		Password: properties.RedisPassword,
 	})
