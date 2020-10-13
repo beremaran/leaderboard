@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 	"leaderboard/app/api"
@@ -41,15 +40,12 @@ func (s *ScoreHandler) submit(c echo.Context) (err error) {
 		return echo.ErrNotFound
 	}
 
-	globalBoard := fmt.Sprintf("%s%s", s.leaderboardKeyPrefix, "GLOBAL")
-	localBoard := fmt.Sprintf("%s%s", s.leaderboardKeyPrefix, user.Country)
-
-	s.redisService.Add(globalBoard, &redis.Z{
+	s.redisService.Add("GLOBAL", &redis.Z{
 		Score:  submission.Score,
 		Member: submission.UserId,
 	})
 
-	s.redisService.Add(localBoard, &redis.Z{
+	s.redisService.Add(user.Country, &redis.Z{
 		Score:  submission.Score,
 		Member: submission.UserId,
 	})

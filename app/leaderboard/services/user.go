@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 	"leaderboard/app/api"
@@ -51,7 +50,7 @@ func (us *UserService) GetByIDWithRank(guid string, leaderboardName string) (*ap
 		return nil, err
 	}
 
-	us.SetRank(profile, fmt.Sprintf("%s%s", us.leaderboardKeyPrefix, leaderboardName))
+	us.SetRank(profile,leaderboardName)
 	return profile, nil
 }
 

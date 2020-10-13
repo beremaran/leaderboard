@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"leaderboard/app/api"
 )
 
@@ -16,7 +15,6 @@ func NewLeaderboardService(userService *UserService, redisService api.RedisServi
 }
 
 func (ls *LeaderboardService) GetPage(boardName string, page int64, pageSize int64) ([]*api.LeaderboardRow, error) {
-	boardName = fmt.Sprintf("%s%s", ls.leaderboardKeyPrefix, boardName)
 	rankingTuples, err := ls.redisService.GetPage(
 		boardName,
 		(page-1)*pageSize, page*pageSize-1,

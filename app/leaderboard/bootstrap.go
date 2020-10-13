@@ -54,7 +54,7 @@ func buildRedisService(properties *Properties) api.RedisService {
 			Password: properties.RedisPassword,
 		})
 
-		return services.NewClusterRedisService(client)
+		return services.NewClusterRedisService(client, properties.LeaderboardKeyPrefix)
 	}
 
 	client := redis.NewClient(&redis.Options{
@@ -63,5 +63,5 @@ func buildRedisService(properties *Properties) api.RedisService {
 		Password: properties.RedisPassword,
 	})
 
-	return services.NewSingleRedisService(client)
+	return services.NewSingleRedisService(client, properties.LeaderboardKeyPrefix)
 }
