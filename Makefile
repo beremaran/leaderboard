@@ -1,9 +1,9 @@
 GO=/usr/bin/env go
 ENTRYPOINT=cmd/leaderboard
 
-all: deps tidy swagger build
+all: deps tidy apidoc build
 
-build:
+build: deps tidy apidoc
 	cd $(ENTRYPOINT); \
 	CGO_ENABLED=0 $(GO) build -tags netgo -a -v
 deps:
