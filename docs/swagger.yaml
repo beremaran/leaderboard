@@ -82,6 +82,17 @@ paths:
       summary: Flush Redis Cache
       tags:
       - actuator
+  /_actuator/user-count:
+    get:
+      description: Get total number of users
+      produces:
+      - text/plain
+      responses:
+        "200": {}
+        "500": {}
+      summary: Get total number of users
+      tags:
+      - actuator
   /leaderboard:
     get:
       description: Get leaderboard

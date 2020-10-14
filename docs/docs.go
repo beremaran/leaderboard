@@ -76,6 +76,22 @@ var doc = `{
                 }
             }
         },
+        "/_actuator/user-count": {
+            "get": {
+                "description": "Get total number of users",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "actuator"
+                ],
+                "summary": "Get total number of users",
+                "responses": {
+                    "200": {},
+                    "500": {}
+                }
+            }
+        },
         "/leaderboard": {
             "get": {
                 "description": "Get leaderboard",

@@ -28,6 +28,21 @@ func (a *ActuatorHandler) Register(echo *echo.Echo) {
 
 	group.DELETE("/flush-all", a.FlushAll)
 	group.GET("/bulk-generate", a.GenerateBulk)
+	group.GET("/user-count", a.GetUserCount)
+}
+
+// GetUserCount godoc
+// @Summary Get total number of users
+// @Description Get total number of users
+// @Produce  plain
+// @Success 200
+// @Failure 500
+// @Tags actuator
+// @Router /_actuator/user-count [get]
+func (a *ActuatorHandler) GetUserCount(c echo.Context) (err error) {
+	size, err := a.redisService.GetSortedSetSize("GLOBAL")
+
+	return c.String(http.StatusOK, strconv.FormatInt(size, 10))
 }
 
 // FlushAll godoc
