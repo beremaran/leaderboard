@@ -33,8 +33,26 @@
                         "name": "n",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "generate with concurrency",
+                        "name": "concurrency",
+                        "in": "query",
+                        "required": true
                     }
                 ],
+                "responses": {
+                    "200": {},
+                    "500": {}
+                }
+            },
+            "delete": {
+                "description": "Stop user generation",
+                "tags": [
+                    "actuator"
+                ],
+                "summary": "Stop user generation",
                 "responses": {
                     "200": {},
                     "500": {}
