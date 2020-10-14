@@ -51,22 +51,20 @@ func Run() {
 }
 
 func buildRedisService(properties *Properties) api.RedisService {
-	// TODO: 99% ClusterClient and Client is interchangeable
+	var client redis.UniversalClient
 	if properties.RedisCluster {
-		client := redis.NewClusterClient(&redis.ClusterOptions{
+		client = redis.NewClusterClient(&redis.ClusterOptions{
 			Addrs:    []string{properties.RedisHost},
 			PoolSize: 64,
 			Password: properties.RedisPassword,
 		})
-
-		return services.NewClusterRedisService(client, properties.LeaderboardKeyPrefix)
+	} else {
+		client = redis.NewClient(&redis.Options{
+			Addr:     properties.RedisHost,
+			PoolSize: 64,
+			Password: properties.RedisPassword,
+		})
 	}
 
-	client := redis.NewClient(&redis.Options{
-		Addr:     properties.RedisHost,
-		PoolSize: 64,
-		Password: properties.RedisPassword,
-	})
-
-	return services.NewSingleRedisService(client, properties.LeaderboardKeyPrefix)
+	return services.NewRedisService(client, properties.LeaderboardKeyPrefix)
 }

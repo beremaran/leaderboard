@@ -1,17 +1,12 @@
 package handlers
 
 import (
-	"fmt"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"leaderboard/app/api"
 	"leaderboard/app/leaderboard/services"
-	"math/rand"
+	"leaderboard/app/leaderboard/tasks"
 	"net/http"
-	"runtime"
 	"strconv"
-	"sync"
-	"time"
 )
 
 type ActuatorHandler struct {
@@ -28,6 +23,7 @@ func (a *ActuatorHandler) Register(echo *echo.Echo) {
 
 	group.DELETE("/flush-all", a.FlushAll)
 	group.GET("/bulk-generate", a.GenerateBulk)
+	group.DELETE("/bulk-generate", a.StopGenerateBulk)
 	group.GET("/user-count", a.GetUserCount)
 }
 
@@ -67,51 +63,34 @@ func (a *ActuatorHandler) FlushAll(c echo.Context) error {
 // @Failure 500
 // @Tags actuator
 // @Param n query int true "how many users to generate" minimum(1)
+// @Param concurrency query int true "generate with concurrency" minimum(1)
 // @Router /_actuator/bulk-generate [get]
 func (a *ActuatorHandler) GenerateBulk(c echo.Context) error {
 	n, err := strconv.ParseUint(c.QueryParam("n"), 10, 64)
 	if err != nil {
 		return err
 	}
-
-	countries := []string{"TR", "US", "GB", "CN", "JP", "AU", "NZ"}
-
-	var wg sync.WaitGroup
-
-	workload := n / uint64(runtime.NumCPU()*2)
-	c.Logger().Printf("gonna generate %d per goroutine", workload)
-	ticker := time.NewTicker(time.Second)
-	for cpu := 0; cpu < runtime.NumCPU()*2; cpu++ {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
-			var i uint64 = 0
-			for ; i < workload; i++ {
-				select {
-				case <-ticker.C:
-					c.Logger().Printf("generated %d", i+1)
-					i--
-				default:
-					id := uuid.New().String()
-					_, err = a.userService.Create(&api.UserProfile{
-						UserId:      id,
-						DisplayName: fmt.Sprintf("user_%d_%s", i, id),
-						Points:      rand.Float64() * 100_000,
-						Rank:        0,
-						Country:     countries[rand.Intn(len(countries))],
-					})
-
-					if err != nil {
-						panic(err)
-					}
-				}
-			}
-		}()
+	concurrency, err := strconv.ParseInt(c.QueryParam("concurrency"), 10, 64)
+	if err != nil {
+		return err
 	}
 
-	wg.Wait()
-	ticker.Stop()
-	return c.NoContent(http.StatusOK)
+	task := a.getUserGenerateTask()
+	taskStatus, err := task.Start(n, concurrency)
+	return c.JSON(http.StatusOK, taskStatus)
+}
+
+func (a *ActuatorHandler) getUserGenerateTask() *tasks.GenerateUsersSingletonTask {
+	return tasks.NewGenerateUsersSingletonTask(a.userService, a.redisService)
+}
+
+// StopGenerateBulk godoc
+// @Summary Stop user generation
+// @Description Stop user generation
+// @Success 200
+// @Failure 500
+// @Tags actuator
+// @Router /_actuator/bulk-generate [delete]
+func (a *ActuatorHandler) StopGenerateBulk(c echo.Context) error {
+	return a.getUserGenerateTask().Stop()
 }

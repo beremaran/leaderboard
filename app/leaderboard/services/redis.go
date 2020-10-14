@@ -9,19 +9,27 @@ import (
 	"time"
 )
 
-type SingleRedisService struct {
+type RedisService struct {
 	context              context.Context
-	client               *redis.Client
+	client               redis.UniversalClient
 	leaderboardKeyPrefix string
 	leaderboardKeys      map[string]string
 	leaderboardKeysMux   sync.Mutex
 }
 
-func NewSingleRedisService(client *redis.Client, leaderboardKeyPrefix string) *SingleRedisService {
-	return &SingleRedisService{client: client, context: context.Background(), leaderboardKeyPrefix: leaderboardKeyPrefix}
+func NewRedisService(client redis.UniversalClient, leaderboardKeyPrefix string) *RedisService {
+	return &RedisService{client: client, context: context.Background(), leaderboardKeyPrefix: leaderboardKeyPrefix}
 }
 
-func (o *SingleRedisService) SetProfile(profile *api.UserProfile) (err error) {
+func (o *RedisService) HSet(key string, values ...interface{}) *redis.IntCmd {
+	return o.client.HSet(o.context, key, values...)
+}
+
+func (o *RedisService) HGetAll(key string) *redis.StringStringMapCmd {
+	return o.client.HGetAll(o.context, key)
+}
+
+func (o *RedisService) SetProfile(profile *api.UserProfile) (err error) {
 	_, err = o.client.HSet(
 		o.context, profile.UserId,
 		"display_name", profile.DisplayName,
@@ -32,7 +40,7 @@ func (o *SingleRedisService) SetProfile(profile *api.UserProfile) (err error) {
 	return
 }
 
-func (o *SingleRedisService) GetProfile(id string) (*api.UserProfile, error) {
+func (o *RedisService) GetProfile(id string) (*api.UserProfile, error) {
 	resultMap, err := o.client.HGetAll(o.context, id).Result()
 	if err != nil {
 		return nil, err
@@ -47,11 +55,11 @@ func (o *SingleRedisService) GetProfile(id string) (*api.UserProfile, error) {
 	return profile, nil
 }
 
-func (o *SingleRedisService) Set(key string, value string) {
+func (o *RedisService) Set(key string, value string) {
 	o.client.Set(o.context, key, value, 8*time.Hour)
 }
 
-func (o *SingleRedisService) Get(key string) (string, error) {
+func (o *RedisService) Get(key string) (string, error) {
 	result, err := o.client.Get(o.context, key).Result()
 	if err != nil {
 		return "", err
@@ -60,7 +68,7 @@ func (o *SingleRedisService) Get(key string) (string, error) {
 	return result, nil
 }
 
-func (o *SingleRedisService) getBoardKey(name string) string {
+func (o *RedisService) getBoardKey(name string) string {
 	o.leaderboardKeysMux.Lock()
 	defer o.leaderboardKeysMux.Unlock()
 
@@ -79,15 +87,15 @@ func (o *SingleRedisService) getBoardKey(name string) string {
 	return boardKey
 }
 
-func (o *SingleRedisService) Add(sortedSetName string, z ...*redis.Z) {
+func (o *RedisService) Add(sortedSetName string, z ...*redis.Z) {
 	o.client.ZAdd(o.context, o.getBoardKey(sortedSetName), z...)
 }
 
-func (o *SingleRedisService) FlushAll() {
+func (o *RedisService) FlushAll() {
 	o.client.FlushAll(o.context)
 }
 
-func (o *SingleRedisService) GetSortedSetSize(sortedSetName string) (int64, error) {
+func (o *RedisService) GetSortedSetSize(sortedSetName string) (int64, error) {
 	result, err := o.client.ZCard(o.context, o.getBoardKey(sortedSetName)).Result()
 	if err != nil {
 		return 0, err
@@ -96,7 +104,7 @@ func (o *SingleRedisService) GetSortedSetSize(sortedSetName string) (int64, erro
 	return result, nil
 }
 
-func (o *SingleRedisService) GetRank(sortedSetName string, key string) (int64, error) {
+func (o *RedisService) GetRank(sortedSetName string, key string) (int64, error) {
 	result, err := o.client.ZRevRank(o.context, o.getBoardKey(sortedSetName), key).Result()
 	if err != nil {
 		o.Add(sortedSetName, &redis.Z{
@@ -115,7 +123,7 @@ func (o *SingleRedisService) GetRank(sortedSetName string, key string) (int64, e
 	return result + 1, nil
 }
 
-func (o *SingleRedisService) GetScore(sortedSetName string, key string) (float64, error) {
+func (o *RedisService) GetScore(sortedSetName string, key string) (float64, error) {
 	result, err := o.client.ZScore(o.context, o.getBoardKey(sortedSetName), key).Result()
 	if err != nil {
 		o.Add(sortedSetName, &redis.Z{
@@ -134,7 +142,7 @@ func (o *SingleRedisService) GetScore(sortedSetName string, key string) (float64
 	return result, nil
 }
 
-func (o *SingleRedisService) GetPage(sortedSetName string, startIndex int64, endIndex int64) ([]redis.Z, error) {
+func (o *RedisService) GetPage(sortedSetName string, startIndex int64, endIndex int64) ([]redis.Z, error) {
 	result, err := o.client.ZRevRangeWithScores(o.context, o.getBoardKey(sortedSetName), startIndex, endIndex).Result()
 	if err != nil {
 		return []redis.Z{}, err

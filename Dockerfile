@@ -4,7 +4,11 @@ WORKDIR /go/src/app
 COPY . .
 
 WORKDIR /go/src/app/cmd/leaderboard
-RUN CGO_ENABLED=0 go build -tags netgo -a -v
+# TODO: make use of Makefile here
+RUN go mod download && \
+    go get -u github.com/swaggo/swag/cmd/swag && \
+    swag init --parseInternal -g main.go && \
+    CGO_ENABLED=0 go build -tags netgo -a -v
 
 FROM alpine:latest
 

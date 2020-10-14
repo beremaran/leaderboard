@@ -15,4 +15,6 @@ type RedisService interface {
 	GetPage(sortedSetName string, startIndex int64, endIndex int64) ([]redis.Z, error)
 	GetProfile(id string) (*UserProfile, error)
 	SetProfile(profile *UserProfile) (err error)
+	HSet(key string, values ...interface{}) *redis.IntCmd
+	HGetAll(key string) *redis.StringStringMapCmd
 }
