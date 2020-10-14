@@ -19,11 +19,20 @@ func NewUserHandler(userService *services.UserService) *UserHandler {
 func (h *UserHandler) Register(e *echo.Echo) {
 	group := e.Group("/user")
 
-	group.POST("/create", h.create)
-	group.GET("/profile/:guid", h.get)
+	group.POST("/create", h.CreateUser)
+	group.GET("/profile/:guid", h.GetUserById)
 }
 
-func (h *UserHandler) create(c echo.Context) (err error) {
+// CreateUser godoc
+// @Summary Create a new user
+// @Description Create a new user
+// @Produce  json
+// @Success 200 {array} api.UserProfile
+// @Failure 500
+// @Tags user
+// @Param profile body api.UserProfile true "user info"
+// @Router /user/create [post]
+func (h *UserHandler) CreateUser(c echo.Context) (err error) {
 	// TODO: Handle duplicate display name
 
 	u := new(api2.UserProfile)
@@ -48,7 +57,16 @@ func (h *UserHandler) create(c echo.Context) (err error) {
 	return c.JSON(http.StatusCreated, ranked)
 }
 
-func (h *UserHandler) get(c echo.Context) (err error) {
+// GetUserById godoc
+// @Summary Get user details by ID
+// @Description Get user details by ID
+// @Produce  json
+// @Success 200 {array} api.UserProfile
+// @Failure 500
+// @Tags user
+// @Param id path string true "user GUID"
+// @Router /user/profile/{id} [get]
+func (h *UserHandler) GetUserById(c echo.Context) (err error) {
 	guid := c.Param("guid")
 	profile, err := h.userService.GetByIDWithRank(guid, "GLOBAL")
 	if profile == nil || err != nil {

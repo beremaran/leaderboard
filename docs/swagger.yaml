@@ -1,0 +1,213 @@
+definitions:
+  api.LeaderboardRow:
+    properties:
+      country:
+        type: string
+      display_name:
+        type: string
+      points:
+        type: integer
+      rank:
+        type: integer
+    type: object
+  api.ScoreSubmission:
+    properties:
+      score:
+        type: number
+      timestamp:
+        type: integer
+      user_id:
+        type: string
+    required:
+    - score
+    - timestamp
+    - user_id
+    type: object
+  api.UserProfile:
+    properties:
+      country:
+        type: string
+      display_name:
+        type: string
+      points:
+        type: number
+      rank:
+        type: integer
+      user_id:
+        type: string
+    required:
+    - country
+    - display_name
+    type: object
+host: leaderboard-v2-lb-ecs-tg-584908050.eu-central-1.elb.amazonaws.com
+info:
+  contact:
+    email: berke.emrecan.arslan@gmail.com
+    name: Berke Emrecan Arslan
+    url: https://beremaran.com
+  description: Simple & fast leaderboard service
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Leaderboard Service
+  version: 0.0.4
+paths:
+  /_actuator/bulk-generate:
+    get:
+      description: Generate users
+      parameters:
+      - description: how many users to generate
+        in: query
+        name: "n"
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200": {}
+        "500": {}
+      summary: Generate users
+      tags:
+      - actuator
+  /_actuator/flush-all:
+    delete:
+      consumes:
+      - application/json
+      description: Remove all data
+      produces:
+      - application/json
+      responses:
+        "200": {}
+        "500": {}
+      summary: Flush Redis Cache
+      tags:
+      - actuator
+  /leaderboard:
+    get:
+      description: Get leaderboard
+      parameters:
+      - description: page number
+        in: query
+        name: page
+        type: integer
+      - description: number of records in a page
+        in: query
+        name: page_size
+        type: integer
+      - description: number of records in a page
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.LeaderboardRow'
+            type: array
+        "500": {}
+      summary: Get leaderboard
+      tags:
+      - leaderboard
+  /leaderboard/{country_iso_code}:
+    get:
+      description: Get leaderboard
+      parameters:
+      - description: page number
+        in: query
+        name: page
+        type: integer
+      - description: number of records in a page
+        in: query
+        name: page_size
+        type: integer
+      - description: number of records in a page
+        in: query
+        name: page_size
+        type: integer
+      - description: ISO standard country code
+        in: path
+        name: country_iso_code
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.LeaderboardRow'
+            type: array
+        "500": {}
+      summary: Get leaderboard
+      tags:
+      - leaderboard
+  /score/submit:
+    post:
+      consumes:
+      - application/json
+      description: submit a new score
+      parameters:
+      - description: score submission
+        in: body
+        name: score
+        required: true
+        schema:
+          $ref: '#/definitions/api.ScoreSubmission'
+      produces:
+      - application/json
+      responses:
+        "200": {}
+        "500": {}
+      summary: submit a new score
+      tags:
+      - leaderboard
+      - score
+  /user/create:
+    post:
+      description: Create a new user
+      parameters:
+      - description: user info
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/api.UserProfile'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.UserProfile'
+            type: array
+        "500": {}
+      summary: Create a new user
+      tags:
+      - user
+  /user/profile/{id}:
+    get:
+      description: Get user details by ID
+      parameters:
+      - description: user GUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/api.UserProfile'
+            type: array
+        "500": {}
+      summary: Get user details by ID
+      tags:
+      - user
+swagger: "2.0"

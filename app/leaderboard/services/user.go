@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 	"leaderboard/app/api"
@@ -21,27 +22,26 @@ func (us *UserService) Create(profile *api.UserProfile) (string, error) {
 		profile.UserId = uuid.New().String()
 	}
 
-	userProfile, err := api.SerializeUserProfile(profile)
+	err := us.redisService.SetProfile(profile)
 	if err != nil {
 		return "", err
 	}
 
-	us.redisService.Set(profile.UserId, userProfile)
+	us.redisService.Add("GLOBAL", &redis.Z{
+		Score:  profile.Points,
+		Member: profile.UserId,
+	})
+
+	us.redisService.Add(profile.Country, &redis.Z{
+		Score:  profile.Points,
+		Member: profile.UserId,
+	})
+
 	return profile.UserId, nil
 }
 
 func (us *UserService) GetByID(guid string) (*api.UserProfile, error) {
-	profileEncoded, err := us.redisService.Get(guid)
-	if err != nil {
-		return nil, err
-	}
-
-	profile, err := api.DeserializeUserProfile(profileEncoded)
-	if err != nil {
-		return nil, err
-	}
-
-	return profile, nil
+	return us.redisService.GetProfile(guid)
 }
 
 func (us *UserService) GetByIDWithRank(guid string, leaderboardName string) (*api.UserProfile, error) {
@@ -50,7 +50,7 @@ func (us *UserService) GetByIDWithRank(guid string, leaderboardName string) (*ap
 		return nil, err
 	}
 
-	us.SetRank(profile,leaderboardName)
+	us.SetRank(profile, leaderboardName)
 	return profile, nil
 }
 
@@ -61,6 +61,9 @@ func (us *UserService) SetRank(profile *api.UserProfile, leaderboardName string)
 	}
 
 	profile.Rank = rank
+	go func() {
+		_ = us.redisService.SetProfile(profile)
+	}()
 }
 
 func (us *UserService) GetAllByID(guid ...string) ([]*api.UserProfile, error) {

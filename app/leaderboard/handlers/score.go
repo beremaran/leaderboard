@@ -21,10 +21,20 @@ func NewScoreHandler(userService *services.UserService, redisService api.RedisSe
 func (s *ScoreHandler) Register(echo *echo.Echo) {
 	group := echo.Group("/score")
 
-	group.POST("/submit", s.submit)
+	group.POST("/submit", s.Submit)
 }
 
-func (s *ScoreHandler) submit(c echo.Context) (err error) {
+// Submit godoc
+// @Summary submit a new score
+// @Description submit a new score
+// @Accept json
+// @Produce json
+// @Success 200
+// @Failure 500
+// @Tags leaderboard,score
+// @Param score body api.ScoreSubmission true "score submission"
+// @Router /score/submit [post]
+func (s *ScoreHandler) Submit(c echo.Context) (err error) {
 	submission := new(api.ScoreSubmission)
 	if err = c.Bind(submission); err != nil {
 		return

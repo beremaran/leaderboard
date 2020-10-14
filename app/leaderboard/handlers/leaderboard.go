@@ -19,11 +19,42 @@ func NewLeaderboardHandler(leaderboardService *services.LeaderboardService) *Lea
 func (l *LeaderboardHandler) Register(echo *echo.Echo) {
 	group := echo.Group("/leaderboard")
 
-	group.GET("", l.getLeaderboard)
-	group.GET("/:country_iso_code", l.getLeaderboard)
+	group.GET("", l.GetLeaderboard)
+	group.GET("/:country_iso_code", l.GetLeaderboard)
 }
 
-func (l *LeaderboardHandler) getLeaderboard(c echo.Context) (err error) {
+// GetLeaderboard godoc
+// @Summary Get leaderboard
+// @Description Get leaderboard
+// @Produce  json
+// @Success 200 {array} api.LeaderboardRow
+// @Failure 500
+// @Tags leaderboard
+// @Param page query int false "page number" minimum(1)
+// @Param page_size query int false "number of records in a page" minimum(1)
+// @Param page_size query int false "number of records in a page" minimum(1)
+// @Router /leaderboard [get]
+func (l *LeaderboardHandler) GetLeaderboard(c echo.Context) error {
+	return l.handleLeaderboardRequest(c)
+}
+
+// GetLeaderboardByCountryCode godoc
+// @Summary Get leaderboard
+// @Description Get leaderboard
+// @Produce  json
+// @Success 200 {array} api.LeaderboardRow
+// @Failure 500
+// @Tags leaderboard
+// @Param page query int false "page number" minimum(1)
+// @Param page_size query int false "number of records in a page" minimum(1)
+// @Param page_size query int false "number of records in a page" minimum(1)
+// @Param country_iso_code path string false "ISO standard country code"
+// @Router /leaderboard/{country_iso_code} [get]
+func (l *LeaderboardHandler) GetLeaderboardByCountryCode(c echo.Context) error {
+	return l.handleLeaderboardRequest(c)
+}
+
+func (l *LeaderboardHandler) handleLeaderboardRequest(c echo.Context) (err error) {
 	q := new(api2.LeaderboardQuery)
 	if err = c.Bind(q); err != nil {
 		return

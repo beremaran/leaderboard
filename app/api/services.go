@@ -34,4 +34,6 @@ type RedisService interface {
 	GetRank(sortedSetName string, key string) (int64, error)
 	GetScore(sortedSetName string, key string) (float64, error)
 	GetPage(sortedSetName string, startIndex int64, endIndex int64) ([]redis.Z, error)
+	GetProfile(id string) (*UserProfile, error)
+	SetProfile(profile *UserProfile) (err error)
 }

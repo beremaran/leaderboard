@@ -4,6 +4,8 @@ import (
 	"context"
 	fmt "fmt"
 	"github.com/go-redis/redis/v8"
+	"leaderboard/app/api"
+	"sync"
 	"time"
 )
 
@@ -12,10 +14,37 @@ type ClusterRedisService struct {
 	client               *redis.ClusterClient
 	leaderboardKeyPrefix string
 	leaderboardKeys      map[string]string
+	leaderboardKeysMux   sync.Mutex
 }
 
 func NewClusterRedisService(client *redis.ClusterClient, leaderboardKeyPrefix string) *ClusterRedisService {
 	return &ClusterRedisService{client: client, context: context.Background(), leaderboardKeyPrefix: leaderboardKeyPrefix}
+}
+
+func (o *ClusterRedisService) SetProfile(profile *api.UserProfile) (err error) {
+	_, err = o.client.HSet(
+		o.context, profile.UserId,
+		"display_name", profile.DisplayName,
+		"country", profile.Country,
+		"points", profile.Points,
+	).Result()
+
+	return
+}
+
+func (o *ClusterRedisService) GetProfile(id string) (*api.UserProfile, error) {
+	resultMap, err := o.client.HGetAll(o.context, id).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	profile := new(api.UserProfile)
+	profile.UserId = id
+	profile.DisplayName = resultMap["display_name"]
+	profile.Country = resultMap["country"]
+	profile.Points, _ = o.GetScore("GLOBAL", id)
+
+	return profile, nil
 }
 
 func (o *ClusterRedisService) Set(key string, value string) {
@@ -32,6 +61,13 @@ func (o *ClusterRedisService) Get(key string) (string, error) {
 }
 
 func (o *ClusterRedisService) getBoardKey(name string) string {
+	o.leaderboardKeysMux.Lock()
+	defer o.leaderboardKeysMux.Unlock()
+
+	if o.leaderboardKeys == nil {
+		o.leaderboardKeys = map[string]string{}
+	}
+
 	var boardKey string
 	if val, ok := o.leaderboardKeys[name]; ok {
 		return val

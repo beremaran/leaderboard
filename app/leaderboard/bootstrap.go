@@ -5,9 +5,11 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 	"leaderboard/app/api"
 	"leaderboard/app/leaderboard/handlers"
 	"leaderboard/app/leaderboard/services"
+	_ "leaderboard/docs"
 	"log"
 )
 
@@ -18,6 +20,8 @@ func Run() {
 	}
 
 	e := echo.New()
+
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
@@ -40,13 +44,14 @@ func Run() {
 	scoreHandler := handlers.NewScoreHandler(userService, redisService, properties.LeaderboardKeyPrefix)
 	scoreHandler.Register(e)
 
-	actuator := handlers.NewActuatorHandler(redisService)
+	actuator := handlers.NewActuatorHandler(redisService, userService)
 	actuator.Register(e)
 
 	e.Logger.Fatal(e.Start(":1323"))
 }
 
 func buildRedisService(properties *Properties) api.RedisService {
+	// TODO: 99% ClusterClient and Client is interchangeable
 	if properties.RedisCluster {
 		client := redis.NewClusterClient(&redis.ClusterOptions{
 			Addrs:    []string{properties.RedisHost},

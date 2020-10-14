@@ -1,9 +1,6 @@
 package api
 
 import (
-	"bytes"
-	"encoding/base64"
-	"encoding/gob"
 	"regexp"
 	"strings"
 )
@@ -27,34 +24,6 @@ type UserProfile struct {
 	Points      float64 `json:"points"`
 	Rank        int64   `json:"rank"`
 	Country     string  `json:"country" validate:"required"`
-}
-
-func SerializeUserProfile(profile *UserProfile) (string, error) {
-	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
-
-	if err := enc.Encode(profile); err != nil {
-		return "", err
-	}
-
-	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
-}
-
-func DeserializeUserProfile(b64string string) (*UserProfile, error) {
-	raw, err := base64.StdEncoding.DecodeString(b64string)
-	if err != nil {
-		return nil, err
-	}
-
-	buf := bytes.NewBuffer(raw)
-	dec := gob.NewDecoder(buf)
-
-	profile := new(UserProfile)
-	if err := dec.Decode(profile); err != nil {
-		return nil, err
-	}
-
-	return profile, nil
 }
 
 type LeaderboardQuery struct {
