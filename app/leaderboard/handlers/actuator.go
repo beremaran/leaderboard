@@ -82,8 +82,9 @@ func (a *ActuatorHandler) GenerateBulk(c echo.Context) error {
 	c.Logger().Printf("gonna generate %d per goroutine", workload)
 	ticker := time.NewTicker(time.Second)
 	for cpu := 0; cpu < runtime.NumCPU()*2; cpu++ {
+		wg.Add(1)
+
 		go func() {
-			wg.Add(1)
 			defer wg.Done()
 
 			var i uint64 = 0
