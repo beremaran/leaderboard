@@ -3,14 +3,24 @@ version: '3.2'
 services:
   redis:
     image: bitnami/redis:latest
-    command: /opt/bitnami/scripts/redis/run.sh --appendonly no
     ports:
       - 6379:6379
     environment:
       ALLOW_EMPTY_PASSWORD: 'yes'
     volumes:
       - redis-data:/bitnami/redis/data
+  leaderboard:
+    build: .
+    ports:
+      - 80:1323
+    environment:
+      HTTP_PORT: 1323
+      REDIS_HOST: localhost:6379
+      REDIS_PASSWORD: ''
+      REDIS_DB: 0
+      REDIS_CLUSTER: 'false'
+      LEADERBOARD_KEY_PREFIX: USER_RANKING_
+
 
 volumes:
   redis-data:
-  mysql-data:
