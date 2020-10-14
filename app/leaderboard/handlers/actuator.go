@@ -78,7 +78,7 @@ func (a *ActuatorHandler) GenerateBulk(c echo.Context) error {
 
 	var wg sync.WaitGroup
 
-	workload := n / uint64(runtime.NumCPU())
+	workload := n / uint64(runtime.NumCPU()*2)
 	c.Logger().Printf("gonna generate %d per goroutine", workload)
 	ticker := time.NewTicker(time.Second)
 	for cpu := 0; cpu < runtime.NumCPU()*2; cpu++ {
