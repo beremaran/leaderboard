@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	fmt "fmt"
+	"fmt"
 	"github.com/go-redis/redis/v8"
 	"leaderboard/app/api"
 	"sync"
