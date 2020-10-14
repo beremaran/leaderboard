@@ -4,10 +4,6 @@
 Redis powered leaderboard service.
 
 Click [here](http://leaderboard-v2-lb-ecs-tg-584908050.eu-central-1.elb.amazonaws.com/swagger/index.html) 
-for Swagger docs and the deployment of the service.
+for Swagger docs to quickly start interacting with it.
 
-Hosted on AWS:
- - CodePipeline
- - Elastic Container Registry
- - Elastic Container Service
- - Elasticache for Redis
+![AWS Deployment Architecture](docs/arch.jpg)

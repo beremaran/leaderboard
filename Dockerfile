@@ -4,7 +4,9 @@ WORKDIR /go/src/app
 COPY . .
 
 WORKDIR /go/src/app/cmd/leaderboard
-RUN CGO_ENABLED=0 go build -tags netgo -a -v
+RUN go mod download && \
+    swag init --parseInternal -g cmd/leaderboard/main.go && \
+    CGO_ENABLED=0 go build -tags netgo -a -v
 
 FROM alpine:latest
 

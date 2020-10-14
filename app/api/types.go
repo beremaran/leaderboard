@@ -63,3 +63,11 @@ func NewValidationErrorResponse(rawMessage string) *ValidationErrorResponse {
 type UserNotFound struct {
 	Message string `json:"message"`
 }
+
+type GenerateUserTaskStatus struct {
+	Status      string
+	Completed   float64
+	Concurrency int64
+	StartedAt   string
+	UserCount   int64
+}
