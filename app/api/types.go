@@ -65,9 +65,13 @@ type UserNotFound struct {
 }
 
 type GenerateUserTaskStatus struct {
-	Status         string
-	Completed      float64
-	Concurrency    uint64
-	StartedAt      string
-	RemainingUsers uint64
+	Status         string `json:"status"`
+	Concurrency    uint64 `json:"concurrency"`
+	StartedAt      string `json:"started_at"`
+	RemainingUsers uint64 `json:"remaining_users"`
+}
+
+type GenerateUserTaskConfiguration struct {
+	NumberOfUsers uint64 `json:"nUsers" validate:"required"`
+	Concurrency   uint64 `json:"concurrency" validate:"required"`
 }

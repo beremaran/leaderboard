@@ -15,7 +15,7 @@ services:
       - 80:1323
     environment:
       HTTP_PORT: 1323
-      REDIS_HOST: localhost:6379
+      REDIS_HOST: redis:6379
       REDIS_PASSWORD: ''
       REDIS_DB: 0
       REDIS_CLUSTER: 'false'

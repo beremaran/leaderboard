@@ -13,7 +13,6 @@ import (
 
 const KeyTask = "TASK_GU"
 const FieldStatus = "STATUS"
-const FieldCompleted = "COMPLETED"
 const FieldConcurrency = "CONCURRENCY"
 const FieldStartedAt = "STARTED_AT"
 const FieldUserCount = "USER_COUNT"
@@ -28,7 +27,13 @@ func NewGenerateUsersSingletonTask(userService *services.UserService, redisServi
 	return &GenerateUsersSingletonTask{userService: userService, redisService: redisService}
 }
 
-func (g *GenerateUsersSingletonTask) Start(nUsers uint64, maxConcurrency int64) (*api.GenerateUserTaskStatus, error) {
+func (g *GenerateUsersSingletonTask) Initialize() {
+	g.updateStatus(&api.GenerateUserTaskStatus{
+		Status: "IDLE",
+	}, true)
+}
+
+func (g *GenerateUsersSingletonTask) Start(nUsers uint64, maxConcurrency uint64) (*api.GenerateUserTaskStatus, error) {
 	if g.getStatusStr(true) == "RUNNING" {
 		return g.Status()
 	}
@@ -77,14 +82,6 @@ func (g *GenerateUsersSingletonTask) status(withMux bool) (*api.GenerateUserTask
 		return nil, err
 	}
 
-	var completedRatio float64 = 0
-	if statusMap[FieldCompleted] != "" {
-		completedRatio, err = strconv.ParseFloat(statusMap[FieldCompleted], 64)
-	}
-	if err != nil {
-		return nil, err
-	}
-
 	var concurrency uint64 = 0
 	if statusMap[FieldConcurrency] != "" {
 		concurrency, err = strconv.ParseUint(statusMap[FieldConcurrency], 10, 64)
@@ -103,14 +100,13 @@ func (g *GenerateUsersSingletonTask) status(withMux bool) (*api.GenerateUserTask
 
 	return &api.GenerateUserTaskStatus{
 		Status:         statusMap[FieldStatus],
-		Completed:      completedRatio,
 		Concurrency:    concurrency,
 		StartedAt:      statusMap[FieldStartedAt],
 		RemainingUsers: userCount,
 	}, nil
 }
 
-func (g *GenerateUsersSingletonTask) generate(n uint64, maxConcurrency int64, redisInit chan bool) {
+func (g *GenerateUsersSingletonTask) generate(n uint64, maxConcurrency uint64, redisInit chan bool) {
 	status, err := g.status(true)
 	if err != nil {
 		g.handleError(err, true)
@@ -119,13 +115,15 @@ func (g *GenerateUsersSingletonTask) generate(n uint64, maxConcurrency int64, re
 	}
 	status.RemainingUsers = n
 	status.Status = "RUNNING"
+	status.StartedAt = time.Now().String()
+	status.Concurrency = maxConcurrency
 	g.updateStatus(status, true)
 
 	countries := []string{"TR", "US", "GB", "CN", "JP", "AU", "NZ"}
 
 	redisInit <- true
 
-	var cpu int64
+	var cpu uint64
 	for cpu = 0; cpu < maxConcurrency; cpu++ {
 		go func() {
 			statusStr := g.getStatusStr(true)
@@ -173,8 +171,6 @@ func (g *GenerateUsersSingletonTask) updateStatus(status *api.GenerateUserTaskSt
 
 	g.redisService.HSet(
 		KeyTask,
-		FieldCompleted,
-		strconv.FormatFloat(status.Completed, 'f', 2, 64),
 		FieldConcurrency,
 		strconv.FormatUint(status.Concurrency, 10),
 		FieldUserCount,

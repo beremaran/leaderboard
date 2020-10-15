@@ -10,8 +10,8 @@ import "leaderboard/app/leaderboard"
 // @contact.url https://beremaran.com
 // @contact.email berke.emrecan.arslan@gmail.com
 
-// @license.name Apache 2.0
-// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+// @license.name The MIT License (MIT)
+// @license.url https://mit-license.org/
 
 // @host leaderboard-v2-lb-ecs-tg-584908050.eu-central-1.elb.amazonaws.com
 func main() {
