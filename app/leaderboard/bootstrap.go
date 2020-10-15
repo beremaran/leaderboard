@@ -9,6 +9,7 @@ import (
 	"leaderboard/app/api"
 	"leaderboard/app/leaderboard/handlers"
 	"leaderboard/app/leaderboard/services"
+	"leaderboard/app/leaderboard/tasks"
 	_ "leaderboard/docs"
 	"log"
 )
@@ -34,6 +35,8 @@ func Run() {
 	redisService := buildRedisService(properties)
 	userService := services.NewUserService(redisService, properties.LeaderboardKeyPrefix)
 	leaderboardService := services.NewLeaderboardService(userService, redisService, properties.LeaderboardKeyPrefix)
+
+	tasks.NewGenerateUsersSingletonTask(userService, redisService).Initialize()
 
 	// handlers
 	userHandler := handlers.NewUserHandler(userService)

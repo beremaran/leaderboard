@@ -24,8 +24,8 @@ var doc = `{
             "email": "berke.emrecan.arslan@gmail.com"
         },
         "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+            "name": "The MIT License (MIT)",
+            "url": "https://mit-license.org/"
         },
         "version": "{{.Version}}"
     },
@@ -49,6 +49,9 @@ var doc = `{
             },
             "post": {
                 "description": "Generate users",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -59,20 +62,11 @@ var doc = `{
                 "parameters": [
                     {
                         "description": "how many users to generate",
-                        "name": "n",
+                        "name": "taskConfig",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "description": "generate with concurrency",
-                        "name": "concurrency",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
+                            "$ref": "#/definitions/api.GenerateUserTaskConfiguration"
                         }
                     }
                 ],
@@ -323,6 +317,21 @@ var doc = `{
         }
     },
     "definitions": {
+        "api.GenerateUserTaskConfiguration": {
+            "type": "object",
+            "required": [
+                "concurrency",
+                "nUsers"
+            ],
+            "properties": {
+                "concurrency": {
+                    "type": "integer"
+                },
+                "nUsers": {
+                    "type": "integer"
+                }
+            }
+        },
         "api.LeaderboardRow": {
             "type": "object",
             "properties": {

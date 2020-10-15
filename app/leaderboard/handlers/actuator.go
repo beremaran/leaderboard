@@ -6,7 +6,6 @@ import (
 	"leaderboard/app/leaderboard/services"
 	"leaderboard/app/leaderboard/tasks"
 	"net/http"
-	"strconv"
 )
 
 type ActuatorHandler struct {
@@ -22,7 +21,8 @@ func (a *ActuatorHandler) Register(echo *echo.Echo) {
 	group := echo.Group("/_actuator")
 
 	group.DELETE("/flush-all", a.FlushAll)
-	group.GET("/bulk-generate", a.GenerateBulk)
+	group.GET("/bulk-generate", a.QueryBulkGeneration)
+	group.POST("/bulk-generate", a.GenerateBulk)
 	group.DELETE("/bulk-generate", a.StopGenerateBulk)
 	group.GET("/user-count", a.GetUserCount)
 }
@@ -38,7 +38,9 @@ func (a *ActuatorHandler) Register(echo *echo.Echo) {
 func (a *ActuatorHandler) GetUserCount(c echo.Context) (err error) {
 	size, err := a.redisService.GetSortedSetSize("GLOBAL")
 
-	return c.String(http.StatusOK, strconv.FormatInt(size, 10))
+	return c.JSON(http.StatusOK, map[string]int64{
+		"count": size,
+	})
 }
 
 // FlushAll godoc
@@ -58,25 +60,29 @@ func (a *ActuatorHandler) FlushAll(c echo.Context) error {
 // GenerateBulk godoc
 // @Summary Generate users
 // @Description Generate users
-// @Produce  json
+// @Accept json
+// @Produce json
 // @Success 200
 // @Failure 500
 // @Tags actuator
-// @Param n body int true "how many users to generate" minimum(1)
-// @Param concurrency body int true "generate with concurrency" minimum(1)
+// @Param taskConfig body api.GenerateUserTaskConfiguration true "how many users to generate" minimum(1)
 // @Router /_actuator/bulk-generate [post]
 func (a *ActuatorHandler) GenerateBulk(c echo.Context) error {
-	n, err := strconv.ParseUint(c.QueryParam("n"), 10, 64)
-	if err != nil {
+	config := new(api.GenerateUserTaskConfiguration)
+	if err := c.Bind(config); err != nil {
 		return err
 	}
-	concurrency, err := strconv.ParseInt(c.QueryParam("concurrency"), 10, 64)
+
+	if err := c.Validate(config); err != nil {
+		return c.JSON(http.StatusBadRequest, api.NewValidationErrorResponse(err.Error()))
+	}
+
+	task := a.getUserGenerateTask()
+	taskStatus, err := task.Start(config.NumberOfUsers, config.Concurrency)
 	if err != nil {
 		return err
 	}
 
-	task := a.getUserGenerateTask()
-	taskStatus, err := task.Start(n, concurrency)
 	return c.JSON(http.StatusOK, taskStatus)
 }
 
@@ -114,5 +120,7 @@ func (a *ActuatorHandler) StopGenerateBulk(c echo.Context) error {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, err)
+	return c.JSON(http.StatusOK, map[string]string{
+		"status": "ok",
+	})
 }
