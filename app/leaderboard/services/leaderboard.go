@@ -53,9 +53,5 @@ func (ls *LeaderboardService) GetPage(boardName string, page int64, pageSize int
 		})
 	}
 
-	//sort.SliceStable(rows, func(i, j int) bool {
-	//	return rows[i].Rank < rows[j].Rank
-	//})
-
 	return rows, nil
 }

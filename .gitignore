@@ -1,3 +1,4 @@
+*.coverprofile
 
 # Created by https://www.toptal.com/developers/gitignore/api/go,jetbrains+all,python,virtualenv
 # Edit at https://www.toptal.com/developers/gitignore?templates=go,jetbrains+all,python,virtualenv

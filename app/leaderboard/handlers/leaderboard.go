@@ -2,17 +2,16 @@ package handlers
 
 import (
 	"github.com/labstack/echo/v4"
-	api2 "leaderboard/app/api"
-	"leaderboard/app/leaderboard/services"
+	"leaderboard/app/api"
 	"net/http"
 	"strings"
 )
 
 type LeaderboardHandler struct {
-	leaderboardService *services.LeaderboardService
+	leaderboardService api.LeaderboardService
 }
 
-func NewLeaderboardHandler(leaderboardService *services.LeaderboardService) *LeaderboardHandler {
+func NewLeaderboardHandler(leaderboardService api.LeaderboardService) *LeaderboardHandler {
 	return &LeaderboardHandler{leaderboardService: leaderboardService}
 }
 
@@ -55,7 +54,7 @@ func (l *LeaderboardHandler) GetLeaderboardByCountryCode(c echo.Context) error {
 }
 
 func (l *LeaderboardHandler) handleLeaderboardRequest(c echo.Context) (err error) {
-	q := new(api2.LeaderboardQuery)
+	q := new(api.LeaderboardQuery)
 	if err = c.Bind(q); err != nil {
 		return
 	}
@@ -69,7 +68,7 @@ func (l *LeaderboardHandler) handleLeaderboardRequest(c echo.Context) (err error
 	}
 
 	if err = c.Validate(q); err != nil {
-		return c.JSON(http.StatusBadRequest, api2.NewValidationErrorResponse(err.Error()))
+		return c.JSON(http.StatusBadRequest, api.NewValidationErrorResponse(err.Error()))
 	}
 
 	countryParam := c.Param("country_iso_code")
@@ -83,7 +82,7 @@ func (l *LeaderboardHandler) handleLeaderboardRequest(c echo.Context) (err error
 
 	page, err := l.leaderboardService.GetPage(q.Country, q.Page, q.PageSize)
 	if err != nil || page == nil {
-		page = []*api2.LeaderboardRow{}
+		page = []*api.LeaderboardRow{}
 	}
 
 	return c.JSON(http.StatusOK, page)

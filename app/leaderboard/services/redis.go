@@ -21,6 +21,15 @@ func NewRedisService(client redis.UniversalClient, leaderboardKeyPrefix string) 
 	return &RedisService{client: client, context: context.Background(), leaderboardKeyPrefix: leaderboardKeyPrefix}
 }
 
+func (o *RedisService) Exists(key string) (bool, error) {
+	result, err := o.client.Exists(o.context, key).Result()
+	if err != nil {
+		return false, err
+	}
+
+	return result == 1, nil
+}
+
 func (o *RedisService) HSet(key string, values ...interface{}) *redis.IntCmd {
 	return o.client.HSet(o.context, key, values...)
 }
@@ -46,6 +55,10 @@ func (o *RedisService) GetProfile(id string) (*api.UserProfile, error) {
 		return nil, err
 	}
 
+	if resultMap["display_name"] == "" {
+		return nil, fmt.Errorf("user is not found with id %s", id)
+	}
+
 	profile := new(api.UserProfile)
 	profile.UserId = id
 	profile.DisplayName = resultMap["display_name"]
@@ -66,6 +79,15 @@ func (o *RedisService) Get(key string) (string, error) {
 	}
 
 	return result, nil
+}
+
+func (o *RedisService) GetOrDefault(key string, defaultVal string) string {
+	val, err := o.Get(key)
+	if val == "" || err != nil {
+		return defaultVal
+	}
+
+	return val
 }
 
 func (o *RedisService) getBoardKey(name string) string {
@@ -96,7 +118,17 @@ func (o *RedisService) FlushAll() {
 }
 
 func (o *RedisService) GetSortedSetSize(sortedSetName string) (int64, error) {
-	result, err := o.client.ZCard(o.context, o.getBoardKey(sortedSetName)).Result()
+	boardKey := o.getBoardKey(sortedSetName)
+	exists, err := o.Exists(boardKey)
+	if err != nil {
+		return 0, err
+	}
+
+	if !exists {
+		return 0, fmt.Errorf("sorted set is not found (%s)", sortedSetName)
+	}
+
+	result, err := o.client.ZCard(o.context, boardKey).Result()
 	if err != nil {
 		return 0, err
 	}
@@ -107,36 +139,26 @@ func (o *RedisService) GetSortedSetSize(sortedSetName string) (int64, error) {
 func (o *RedisService) GetRank(sortedSetName string, key string) (int64, error) {
 	result, err := o.client.ZRevRank(o.context, o.getBoardKey(sortedSetName), key).Result()
 	if err != nil {
-		o.Add(sortedSetName, &redis.Z{
-			Score:  0,
-			Member: key,
-		})
-
-		rank, err := o.GetRank(sortedSetName, key)
-		if err != nil {
-			return 0.0, err
-		}
-
-		return rank, nil
+		return 0, err
 	}
 
 	return result + 1, nil
 }
 
 func (o *RedisService) GetScore(sortedSetName string, key string) (float64, error) {
+	boardKey := o.getBoardKey(sortedSetName)
+	exists, err := o.Exists(boardKey)
+	if err != nil {
+		return 0, err
+	}
+
+	if !exists {
+		return 0, fmt.Errorf("sorted set is not found (%s)", sortedSetName)
+	}
+
 	result, err := o.client.ZScore(o.context, o.getBoardKey(sortedSetName), key).Result()
 	if err != nil {
-		o.Add(sortedSetName, &redis.Z{
-			Score:  0,
-			Member: key,
-		})
-
-		score, err := o.GetScore(sortedSetName, key)
-		if err != nil {
-			return 0.0, err
-		}
-
-		return score, nil
+		return 0, err
 	}
 
 	return result, nil

@@ -5,7 +5,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 	"leaderboard/app/api"
-	"log"
 )
 
 type UserService struct {
@@ -50,20 +49,26 @@ func (us *UserService) GetByIDWithRank(guid string, leaderboardName string) (*ap
 		return nil, err
 	}
 
-	us.SetRank(profile, leaderboardName)
+	err = us.SetRank(profile, leaderboardName)
+	if err != nil {
+		return nil, err
+	}
+
 	return profile, nil
 }
 
-func (us *UserService) SetRank(profile *api.UserProfile, leaderboardName string) {
+func (us *UserService) SetRank(profile *api.UserProfile, leaderboardName string) error {
 	rank, err := us.redisService.GetRank(leaderboardName, profile.UserId)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	profile.Rank = rank
 	go func() {
 		_ = us.redisService.SetProfile(profile)
 	}()
+
+	return nil
 }
 
 func (us *UserService) GetAllByID(guid ...string) ([]*api.UserProfile, error) {

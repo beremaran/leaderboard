@@ -17,4 +17,10 @@ type RedisService interface {
 	SetProfile(profile *UserProfile) (err error)
 	HSet(key string, values ...interface{}) *redis.IntCmd
 	HGetAll(key string) *redis.StringStringMapCmd
+	Exists(key string) (bool, error)
+	GetOrDefault(key string, defaultVal string) string
+}
+
+type LeaderboardService interface {
+	GetPage(boardName string, page int64, pageSize int64) ([]*LeaderboardRow, error)
 }
