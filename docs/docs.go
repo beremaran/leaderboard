@@ -34,6 +34,20 @@ var doc = `{
     "paths": {
         "/_actuator/bulk-generate": {
             "get": {
+                "description": "Query user generation task status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "actuator"
+                ],
+                "summary": "Query user generation task status",
+                "responses": {
+                    "200": {},
+                    "500": {}
+                }
+            },
+            "post": {
                 "description": "Generate users",
                 "produces": [
                     "application/json"
@@ -44,18 +58,22 @@ var doc = `{
                 "summary": "Generate users",
                 "parameters": [
                     {
-                        "type": "integer",
                         "description": "how many users to generate",
                         "name": "n",
-                        "in": "query",
-                        "required": true
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
                     },
                     {
-                        "type": "integer",
                         "description": "generate with concurrency",
                         "name": "concurrency",
-                        "in": "query",
-                        "required": true
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
                     }
                 ],
                 "responses": {

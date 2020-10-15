@@ -62,18 +62,30 @@ paths:
       tags:
       - actuator
     get:
+      description: Query user generation task status
+      produces:
+      - application/json
+      responses:
+        "200": {}
+        "500": {}
+      summary: Query user generation task status
+      tags:
+      - actuator
+    post:
       description: Generate users
       parameters:
       - description: how many users to generate
-        in: query
+        in: body
         name: "n"
         required: true
-        type: integer
+        schema:
+          type: integer
       - description: generate with concurrency
-        in: query
+        in: body
         name: concurrency
         required: true
-        type: integer
+        schema:
+          type: integer
       produces:
       - application/json
       responses:

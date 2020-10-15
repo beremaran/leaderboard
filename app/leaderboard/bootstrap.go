@@ -30,6 +30,7 @@ func Run() {
 	e.Validator = services.NewStructValidator(validator.New())
 
 	// services
+	// TODO: move services into echo context
 	redisService := buildRedisService(properties)
 	userService := services.NewUserService(redisService, properties.LeaderboardKeyPrefix)
 	leaderboardService := services.NewLeaderboardService(userService, redisService, properties.LeaderboardKeyPrefix)

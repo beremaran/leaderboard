@@ -62,9 +62,9 @@ func (a *ActuatorHandler) FlushAll(c echo.Context) error {
 // @Success 200
 // @Failure 500
 // @Tags actuator
-// @Param n query int true "how many users to generate" minimum(1)
-// @Param concurrency query int true "generate with concurrency" minimum(1)
-// @Router /_actuator/bulk-generate [get]
+// @Param n body int true "how many users to generate" minimum(1)
+// @Param concurrency body int true "generate with concurrency" minimum(1)
+// @Router /_actuator/bulk-generate [post]
 func (a *ActuatorHandler) GenerateBulk(c echo.Context) error {
 	n, err := strconv.ParseUint(c.QueryParam("n"), 10, 64)
 	if err != nil {
@@ -80,6 +80,23 @@ func (a *ActuatorHandler) GenerateBulk(c echo.Context) error {
 	return c.JSON(http.StatusOK, taskStatus)
 }
 
+// QueryBulkGeneration godoc
+// @Summary Query user generation task status
+// @Description Query user generation task status
+// @Produce  json
+// @Success 200
+// @Failure 500
+// @Tags actuator
+// @Router /_actuator/bulk-generate [get]
+func (a *ActuatorHandler) QueryBulkGeneration(c echo.Context) error {
+	status, err := a.getUserGenerateTask().Status()
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, status)
+}
+
 func (a *ActuatorHandler) getUserGenerateTask() *tasks.GenerateUsersSingletonTask {
 	return tasks.NewGenerateUsersSingletonTask(a.userService, a.redisService)
 }
@@ -92,5 +109,10 @@ func (a *ActuatorHandler) getUserGenerateTask() *tasks.GenerateUsersSingletonTas
 // @Tags actuator
 // @Router /_actuator/bulk-generate [delete]
 func (a *ActuatorHandler) StopGenerateBulk(c echo.Context) error {
-	return a.getUserGenerateTask().Stop()
+	err := a.getUserGenerateTask().Stop()
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, err)
 }
