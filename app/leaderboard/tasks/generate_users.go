@@ -2,19 +2,16 @@ package tasks
 
 import (
 	"fmt"
-	"github.com/google/uuid"
+	"github.com/labstack/gommon/log"
 	"leaderboard/app/api"
 	"leaderboard/app/leaderboard/services"
-	"log"
 	"math/rand"
 	"strconv"
-	"sync/atomic"
+	"sync"
 	"time"
 )
 
 const KeyTask = "TASK_GU"
-const KeyRunning = "TASK_GU_RUN_STATE"
-const KeyStopFlag = "FLAG_STOP_TASK_GU"
 const FieldStatus = "STATUS"
 const FieldCompleted = "COMPLETED"
 const FieldConcurrency = "CONCURRENCY"
@@ -24,6 +21,7 @@ const FieldUserCount = "USER_COUNT"
 type GenerateUsersSingletonTask struct {
 	userService  *services.UserService
 	redisService api.RedisService
+	stateMux     sync.Mutex
 }
 
 func NewGenerateUsersSingletonTask(userService *services.UserService, redisService api.RedisService) *GenerateUsersSingletonTask {
@@ -31,148 +29,208 @@ func NewGenerateUsersSingletonTask(userService *services.UserService, redisServi
 }
 
 func (g *GenerateUsersSingletonTask) Start(nUsers uint64, maxConcurrency int64) (*api.GenerateUserTaskStatus, error) {
-	running, _ := g.redisService.Get(KeyRunning)
-	if running == "t" {
-		log.Printf("already running")
+	if g.getStatusStr(true) == "RUNNING" {
 		return g.Status()
 	}
 
-	log.Printf("starting generator ...")
-	redisInit := make(chan bool, 1)
-	go g.generate(nUsers, maxConcurrency, redisInit)
+	initResult := make(chan bool, 1)
+	go g.generate(nUsers, maxConcurrency, initResult)
 
-	<-redisInit
+	result := <-initResult
+	if !result {
+		return nil, fmt.Errorf("task initialization failed")
+	}
+
 	return g.Status()
 }
 
 func (g *GenerateUsersSingletonTask) Stop() error {
-	g.redisService.Set(KeyStopFlag, "1")
-	g.redisService.Set(KeyRunning, "f")
+	g.updateStatus(&api.GenerateUserTaskStatus{
+		Status: "CANCELLED",
+	}, true)
 
 	return nil
 }
 
 func (g *GenerateUsersSingletonTask) Status() (*api.GenerateUserTaskStatus, error) {
+	return g.status(true)
+}
+
+func (g *GenerateUsersSingletonTask) status(withMux bool) (*api.GenerateUserTaskStatus, error) {
+	if withMux {
+		g.stateMux.Lock()
+		defer g.stateMux.Unlock()
+	}
+
+	exists, err := g.redisService.Exists(KeyTask)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return &api.GenerateUserTaskStatus{
+			Status: "IDLE",
+		}, nil
+	}
+
 	statusMap, err := g.redisService.HGetAll(KeyTask).Result()
 	if err != nil {
 		return nil, err
 	}
 
-	completedRatio, err := strconv.ParseFloat(statusMap[FieldCompleted], 64)
+	var completedRatio float64 = 0
+	if statusMap[FieldCompleted] != "" {
+		completedRatio, err = strconv.ParseFloat(statusMap[FieldCompleted], 64)
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	concurrency, err := strconv.ParseInt(statusMap[FieldConcurrency], 10, 64)
+	var concurrency uint64 = 0
+	if statusMap[FieldConcurrency] != "" {
+		concurrency, err = strconv.ParseUint(statusMap[FieldConcurrency], 10, 64)
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	userCount, err := strconv.ParseInt(statusMap[FieldUserCount], 10, 64)
+	var userCount = ^uint64(0)
+	if statusMap[FieldUserCount] != "" {
+		userCount, err = strconv.ParseUint(statusMap[FieldUserCount], 10, 64)
+	}
 	if err != nil {
 		return nil, err
 	}
 
 	return &api.GenerateUserTaskStatus{
-		Status:      statusMap[FieldStatus],
-		Completed:   completedRatio,
-		Concurrency: concurrency,
-		StartedAt:   statusMap[FieldStartedAt],
-		UserCount:   userCount,
+		Status:         statusMap[FieldStatus],
+		Completed:      completedRatio,
+		Concurrency:    concurrency,
+		StartedAt:      statusMap[FieldStartedAt],
+		RemainingUsers: userCount,
 	}, nil
 }
 
 func (g *GenerateUsersSingletonTask) generate(n uint64, maxConcurrency int64, redisInit chan bool) {
-	g.redisService.Set(KeyStopFlag, "0")
-	g.redisService.Set(KeyRunning, "t")
+	status, err := g.status(true)
+	if err != nil {
+		g.handleError(err, true)
+		redisInit <- false
+		return
+	}
+	status.RemainingUsers = n
+	status.Status = "RUNNING"
+	g.updateStatus(status, true)
+
 	countries := []string{"TR", "US", "GB", "CN", "JP", "AU", "NZ"}
 
-	var stop int32 = 0
-	var generated uint64 = 0
-
-	g.redisService.HSet(
-		KeyTask,
-		FieldCompleted,
-		strconv.FormatFloat(float64(generated)*100/float64(n), 'f', 2, 64),
-		FieldConcurrency,
-		strconv.FormatInt(maxConcurrency, 10),
-		FieldUserCount,
-		strconv.FormatInt(int64(generated), 10),
-		FieldStartedAt,
-		time.Now().String(),
-		FieldStatus,
-		"STARTING",
-	)
 	redisInit <- true
 
 	var cpu int64
 	for cpu = 0; cpu < maxConcurrency; cpu++ {
 		go func() {
-			for atomic.LoadInt32(&stop) == 0 && atomic.LoadUint64(&generated) < n {
-				id := uuid.New().String()
+			statusStr := g.getStatusStr(true)
+			if statusStr == "CANCELLED" || statusStr == "DONE" || statusStr == "ERROR" {
+				return
+			}
+
+			for g.getUserCount(true) > 0 {
 				_, err := g.userService.Create(&api.UserProfile{
-					UserId:      id,
-					DisplayName: fmt.Sprintf("user_%d_%s", atomic.LoadUint64(&generated), id),
+					DisplayName: fmt.Sprintf("user_%d", time.Now().UnixNano()),
 					Points:      rand.Float64() * 100_000,
-					Rank:        0,
 					Country:     countries[rand.Intn(len(countries))],
 				})
 
 				if err != nil {
-					panic(err)
+					g.handleError(err, true)
+					return
 				}
-				atomic.AddUint64(&generated, 1)
-			}
 
-			log.Printf("generator goroutine is done.")
+				g.decrementToGenerate()
+			}
 		}()
 	}
+}
 
-	go func() {
-		ticker := time.NewTicker(5 * time.Second)
-		defer ticker.Stop()
+func (g *GenerateUsersSingletonTask) handleError(err error, withMux bool) {
+	if withMux {
+		g.stateMux.Lock()
+		defer g.stateMux.Unlock()
+	}
 
-		updateStatus := func() {
-			log.Printf("updating task status")
-			var taskStatus = "RUNNING"
-			if atomic.LoadInt32(&stop) == 1 {
-				taskStatus = "STOPPED"
-			}
+	g.updateStatus(&api.GenerateUserTaskStatus{
+		Status:    "ERROR",
+		StartedAt: time.Now().String(),
+	}, !withMux)
 
-			// update stats
-			g.redisService.HSet(
-				KeyTask,
-				FieldCompleted,
-				strconv.FormatFloat(float64(generated)*100/float64(n), 'f', 2, 64),
-				FieldConcurrency,
-				strconv.FormatInt(maxConcurrency, 10),
-				FieldUserCount,
-				strconv.FormatInt(int64(generated), 10),
-				FieldStatus,
-				taskStatus,
-			)
-		}
-		defer updateStatus()
+	log.Error(err)
+}
 
-		for atomic.LoadInt32(&stop) == 0 {
-			<-ticker.C
-			stopFlagStr, err := g.redisService.Get(KeyStopFlag)
-			if err != nil {
-				panic(err)
-			}
+func (g *GenerateUsersSingletonTask) updateStatus(status *api.GenerateUserTaskStatus, withMux bool) {
+	if withMux {
+		g.stateMux.Lock()
+		defer g.stateMux.Unlock()
+	}
 
-			stopFlag, err := strconv.ParseInt(stopFlagStr, 10, 32)
-			atomic.StoreInt32(&stop, int32(stopFlag))
+	g.redisService.HSet(
+		KeyTask,
+		FieldCompleted,
+		strconv.FormatFloat(status.Completed, 'f', 2, 64),
+		FieldConcurrency,
+		strconv.FormatUint(status.Concurrency, 10),
+		FieldUserCount,
+		strconv.FormatUint(status.RemainingUsers, 10),
+		FieldStartedAt,
+		status.StartedAt,
+		FieldStatus,
+		status.Status,
+	)
+}
 
-			updateStatus()
-			if atomic.LoadUint64(&generated) >= n {
-				g.redisService.Set(KeyStopFlag, "1")
-				g.redisService.Set(KeyRunning, "f")
-				atomic.StoreInt32(&stop, 1)
-				break
-			}
-		}
+func (g *GenerateUsersSingletonTask) getUserCount(withMux bool) uint64 {
+	if withMux {
+		g.stateMux.Lock()
+		defer g.stateMux.Unlock()
+	}
 
-		log.Printf("status update goroutine is done.")
-	}()
+	status, err := g.status(!withMux)
+	if err != nil {
+		g.handleError(err, !withMux)
+		return 0
+	}
+
+	return status.RemainingUsers
+}
+
+func (g *GenerateUsersSingletonTask) getStatusStr(withMux bool) string {
+	if withMux {
+		g.stateMux.Lock()
+		defer g.stateMux.Unlock()
+	}
+
+	status, err := g.status(!withMux)
+	if err != nil {
+		g.handleError(err, !withMux)
+		return ""
+	}
+
+	return status.Status
+}
+
+func (g *GenerateUsersSingletonTask) decrementToGenerate() {
+	g.stateMux.Lock()
+
+	status, err := g.status(false)
+	if err != nil {
+		g.stateMux.Unlock()
+		g.handleError(err, true)
+		return
+	}
+	defer g.stateMux.Unlock()
+
+	status.RemainingUsers--
+	if status.RemainingUsers == 0 {
+		status.Status = "DONE"
+	}
+
+	g.updateStatus(status, false)
 }

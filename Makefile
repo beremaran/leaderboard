@@ -13,3 +13,6 @@ tidy:
 apidoc:
 	swag init --parseInternal -g $(ENTRYPOINT)/main.go
 .PHONY: all build deps tidy swagger
+
+test:
+	ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --race --progress

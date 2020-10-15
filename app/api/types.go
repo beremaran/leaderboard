@@ -65,9 +65,9 @@ type UserNotFound struct {
 }
 
 type GenerateUserTaskStatus struct {
-	Status      string
-	Completed   float64
-	Concurrency int64
-	StartedAt   string
-	UserCount   int64
+	Status         string
+	Completed      float64
+	Concurrency    uint64
+	StartedAt      string
+	RemainingUsers uint64
 }
