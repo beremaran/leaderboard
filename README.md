@@ -3,7 +3,7 @@
 
 Redis powered leaderboard service.
 
-Click [here](http://leaderboard-v2-lb-ecs-tg-584908050.eu-central-1.elb.amazonaws.com/swagger/index.html) 
-for Swagger docs to quickly start interacting with it.
+Click ~~here~~* for Swagger docs to quickly start interacting with it.
 
+* Not availabe right now. Create an issue to preview it.
 ![AWS Deployment Architecture](docs/arch.jpg)
